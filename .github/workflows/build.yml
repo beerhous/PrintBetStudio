@@ -1,0 +1,37 @@
+name: Build Windows EXE
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    # 1. 拉取代码
+    - uses: actions/checkout@v3
+
+    # 2. 准备 Python 环境
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    # 3. 安装依赖
+    - name: Install Requirements
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # 4. 核心打包命令 (使用 PyInstaller)
+    # --noconsole: 去掉黑框
+    # --onefile: 生成单文件
+    # --add-data: 把网页文件打进去
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --noconsole --onefile --name="PrintBet_Studio" --add-data "templates;templates" main.py
+
+    # 5. 上传结果供下载
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrintBet_App_v1
+        path: dist/PrintBet_Studio.exe
