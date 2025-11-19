@@ -1,68 +1,255 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>PrintBet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投注工坊 (PrintBet Studio)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; background: #f0f2f5; font-size: 13px; user-select: none; }
+        /* 表格样式 */
+        .data-table th { background: #e9ecef; padding: 8px; border: 1px solid #dee2e6; font-weight: bold; color: #495057; }
+        .data-table td { padding: 6px 8px; border: 1px solid #dee2e6; background: #fff; color: #212529; }
+        .data-table tr:nth-child(even) td { background: #f8f9fa; }
+        .data-table tr:hover td { background: #e2e6ea; }
+        textarea { font-family: 'Consolas', 'Courier New', monospace; }
+        
+        /* 滚动条美化 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+    </style>
 </head>
-<body class="bg-gray-100 h-screen flex text-slate-800 font-sans">
-    <div class="w-64 bg-slate-900 text-white flex flex-col p-4">
-        <div class="text-xl font-bold mb-6">PrintBet Pro</div>
-        <div class="bg-blue-600 p-2 rounded mb-2">⚽ Football Mix</div>
-    </div>
-    <div class="flex-1 p-6 flex gap-6">
-        <div class="flex-1 bg-white rounded-xl shadow p-6 flex flex-col">
-            <div class="flex justify-between mb-4 items-center">
-                <h2 class="font-bold text-lg">Bet Editor</h2>
-                <div class="text-sm text-gray-400">Auto-OCR Disabled</div>
+<body class="h-screen flex flex-col">
+
+    <!-- 顶部标题栏 -->
+    <div class="bg-slate-800 text-white px-4 py-3 flex items-center justify-between shadow-md z-10">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🎲</span>
+                <div>
+                    <div class="font-bold text-lg tracking-wide leading-none">投注工坊</div>
+                    <div class="text-[10px] text-slate-400 leading-none mt-1">PrintBet Enterprise v2.0</div>
+                </div>
             </div>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div><label class="text-xs font-bold text-gray-500">PASS TYPE</label><select id="pt" class="w-full border p-2 rounded"><option value="2x1">2x1</option><option value="3x1">3x1</option></select></div>
-                <div><label class="text-xs font-bold text-gray-500">MULTI</label><input type="number" id="mu" value="10" class="w-full border p-2 rounded"></div>
-            </div>
-            <div class="flex-1 overflow-y-auto">
-                <table class="w-full text-sm"><tbody id="tb"></tbody></table>
-                <button onclick="add()" class="w-full mt-4 py-2 border-2 border-dashed text-gray-400 hover:border-blue-500 hover:text-blue-500 rounded">+ Add Match</button>
-            </div>
-            <div class="mt-4 pt-4 border-t flex justify-between items-center">
-                <div class="font-bold text-lg">Total: <span id="tot">0</span></div>
-                <button onclick="prt()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold shadow hover:bg-blue-700">PRINT</button>
+            <div class="h-8 w-px bg-slate-600 mx-2"></div>
+            <div class="flex gap-2">
+                <button onclick="importMock()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs border border-slate-600 transition">📄 导入演示数据</button>
             </div>
         </div>
-        <div class="w-80 bg-white rounded-xl shadow p-6 flex flex-col items-center text-center">
-            <div class="text-xs font-bold text-gray-400 mb-2">PREVIEW</div>
-            <div id="pre" class="w-full text-left text-xs font-mono whitespace-pre-wrap mb-4 text-gray-600"></div>
-            <div class="border-t border-dashed w-full my-2"></div>
-            <div class="font-bold mb-2">Scan Code:</div>
-            <div id="qr"></div>
-            <div id="st" class="mt-4 text-xs text-gray-400">Ready</div>
+        <div class="flex items-center gap-2 text-xs text-slate-400">
+            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+            <span>系统就绪</span>
         </div>
     </div>
+
+    <!-- 主工作区 -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- 左侧：数据录入 -->
+        <div class="w-[400px] flex flex-col border-r border-slate-300 bg-white p-3 shadow-inner z-0">
+            <div class="flex justify-between mb-2 items-end">
+                <label class="font-bold text-slate-700 text-sm border-l-4 border-blue-600 pl-2">原始单据录入</label>
+                <span class="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">格式: 场次-选项 (如 3001-3)</span>
+            </div>
+            
+            <textarea id="rawInput" class="flex-1 border border-slate-300 p-3 resize-none text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm rounded transition" 
+                placeholder="在此粘贴文本...&#10;示例：&#10;3001-3&#10;3002-1,0&#10;周三003:2:1"></textarea>
+            
+            <div class="mt-3 bg-slate-50 p-3 rounded border border-slate-200">
+                <div class="text-xs font-bold text-slate-500 mb-2 uppercase">解析设置</div>
+                <div class="flex gap-2">
+                    <select id="delimiter" class="border border-slate-300 p-2 rounded w-32 text-sm outline-none focus:border-blue-500">
+                        <option value="-">分隔符: -</option>
+                        <option value=":">分隔符: :</option>
+                        <option value=" ">分隔符: 空格</option>
+                    </select>
+                    <button onclick="parseText()" class="flex-1 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white py-2 rounded font-bold shadow transition flex items-center justify-center gap-2">
+                        <span>⚡</span> 开始解析
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：列表与操作 -->
+        <div class="flex-1 flex flex-col bg-slate-100 p-3">
+            <!-- 列表头部控制 -->
+            <div class="flex justify-between mb-3 items-center bg-white p-2 rounded border border-slate-200 shadow-sm">
+                <label class="font-bold text-slate-700 text-sm border-l-4 border-green-500 pl-2">待打印列表</label>
+                <div class="flex gap-3 items-center bg-slate-50 px-3 py-1 rounded border border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-bold text-slate-600">统一过关:</label>
+                        <select id="gPass" class="border border-slate-300 p-1 rounded w-20 text-sm outline-none"><option>1x1</option><option>2x1</option><option>3x1</option></select>
+                    </div>
+                    <div class="w-px h-4 bg-slate-300"></div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-bold text-slate-600">统一倍数:</label>
+                        <input id="gMulti" type="number" value="10" class="border border-slate-300 p-1 rounded w-16 text-center text-sm outline-none font-bold text-blue-600">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 表格区域 -->
+            <div class="flex-1 overflow-auto border border-slate-300 bg-white rounded shadow-sm">
+                <table class="w-full data-table text-left border-collapse">
+                    <thead class="sticky top-0 z-10 shadow-sm">
+                        <tr>
+                            <th class="w-12 text-center">序号</th>
+                            <th class="w-24">原始场次</th>
+                            <th class="w-24">标准编码</th>
+                            <th>解析详情 (场次 > 玩法 = 选项)</th>
+                            <th class="w-20 text-center">状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listBody">
+                        <tr>
+                            <td colspan="5" class="text-center text-slate-400 py-10">暂无数据，请在左侧录入并点击解析</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 底部控制台 -->
+            <div class="h-36 mt-3 flex gap-3">
+                <!-- 日志 -->
+                <div class="flex-1 bg-slate-900 text-green-400 p-3 font-mono text-xs overflow-y-auto rounded border border-slate-700 shadow-inner leading-relaxed" id="logs">
+                    <span class="text-slate-500"># 系统初始化完成...</span><br>
+                    <span class="text-slate-500"># 等待用户操作...</span><br>
+                </div>
+                
+                <!-- 出票按钮区 -->
+                <div class="w-56 flex flex-col gap-2 bg-white p-3 rounded border border-slate-200 shadow-sm">
+                    <div class="flex justify-between text-sm border-b border-slate-100 pb-2 mb-1">
+                        <span class="text-slate-600 font-bold">有效单数:</span> 
+                        <span id="validCount" class="text-blue-600 font-bold text-lg leading-none">0</span>
+                    </div>
+                    <button onclick="startBatchPrint()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-lg shadow transition flex flex-col items-center justify-center group">
+                        <span class="group-hover:scale-105 transition-transform">🖨️ 批量出票</span>
+                        <span class="text-[10px] font-normal opacity-80">发送至队列</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        let bets=[{m:'周三001',t:'SPF',c:'负'}];
-        function r(){
-            let h='',mu=document.getElementById('mu').value;
-            bets.forEach((b,i)=>h+=`<tr class="border-b"><td class="p-2"><input value="${b.m}" oninput="bets[${i}].m=this.value;r()" class="w-full outline-none"></td><td class="p-2"><select onchange="bets[${i}].t=this.value;r()"><option value="SPF" ${b.t=='SPF'?'selected':''}>SPF</option><option value="SCORE" ${b.t=='SCORE'?'selected':''}>SCORE</option></select></td><td class="p-2"><input value="${b.c}" oninput="bets[${i}].c=this.value;r()" class="w-full font-bold text-blue-600 outline-none"></td><td class="p-2"><button onclick="bets.splice(${i},1);r()" class="text-red-500">×</button></td></tr>`);
-            document.getElementById('tb').innerHTML=h;
-            document.getElementById('tot').innerText=bets.length*2*mu;
-            let txt=`TIME: ${new Date().toLocaleTimeString()}\n---\n`;
-            bets.forEach(b=>txt+=`${b.m}>${b.t}:${b.c}\n`);
-            document.getElementById('pre').innerText=txt;
+        let parsedTickets = [];
+
+        // 简单的日志工具
+        function log(htmlMsg) {
+            const div = document.getElementById('logs');
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML += `<div><span class="text-slate-500">[${time}]</span> ${htmlMsg}</div>`;
+            div.scrollTop = div.scrollHeight;
         }
-        function add(){bets.push({m:'周x000',t:'SPF',c:''});r();}
-        async function prt(){
-            document.getElementById('st').innerText="Sending...";
-            try{
-                let res=await fetch('/api/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bets:bets.map(x=>({match:x.m,type:x.t,choice:x.c})),passType:document.getElementById('pt').value,multiplier:document.getElementById('mu').value})});
-                let d=await res.json();
-                if(d.status=='ok'){
-                    document.getElementById('st').innerText="✅ Done"; document.getElementById('st').className="mt-4 text-xs text-green-600 font-bold";
-                    document.getElementById('qr').innerHTML=''; new QRCode(document.getElementById('qr'),{text:d.qr,width:100,height:100});
-                }else{alert(d.msg);document.getElementById('st').innerText="❌ Error";}
-            }catch(e){alert("Connection Error");}
+
+        // 导入演示数据
+        function importMock() {
+            document.getElementById('rawInput').value = 
+`3001-3
+3002-1
+3003-0
+周三004:3:0
+周四005-胜平
+3006-2:1`;
+            log("✅ 已导入演示数据模板");
         }
-        r();
+
+        // 调用后台解析
+        async function parseText() {
+            const raw = document.getElementById('rawInput').value;
+            const delimiter = document.getElementById('delimiter').value;
+
+            if(!raw.trim()) return alert("请先在左侧输入框粘贴数据！");
+            
+            log("⏳ 正在提交解析请求...");
+            try {
+                // 注意：这里通常后端不需要 delimiter 参数，后端会自动判断，或你可以传过去
+                // 这里为了兼容之前的 parser.py 逻辑，我们直接传 content
+                const res = await fetch('/api/batch/parse', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content: raw})
+                });
+                const data = await res.json();
+                
+                parsedTickets = data.tickets;
+                renderTable(data.tickets);
+                
+                if(data.errors.length > 0) {
+                    log(`<span class="text-yellow-400">⚠️ 解析完成，但有 ${data.errors.length} 行被跳过</span>`);
+                    data.errors.forEach(e => log(`<span class="text-red-400 pl-4">❌ ${e}</span>`));
+                } else {
+                    log(`<span class="text-white">✅ 解析成功！共 ${data.tickets.length} 条有效数据</span>`);
+                }
+            } catch(e) {
+                log(`<span class="text-red-500">❌ 服务器连接失败: ${e.message}</span>`);
+            }
+        }
+
+        // 渲染表格
+        function renderTable(list) {
+            const tbody = document.getElementById('listBody');
+            tbody.innerHTML = '';
+            
+            if(list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-slate-400 py-10">没有解析到有效数据</td></tr>';
+                document.getElementById('validCount').innerText = 0;
+                return;
+            }
+
+            list.forEach(t => {
+                // 格式化显示投注详情
+                let detail = t.bets.map(b => 
+                    `<span class="bg-slate-100 text-slate-600 px-1 rounded border border-slate-200 text-xs">` +
+                    `${b.match} &gt; ${b.type} = <span class="text-blue-600 font-bold">${b.choice}</span>` +
+                    `</span>`
+                ).join(' ');
+
+                tbody.innerHTML += `
+                    <tr class="transition hover:bg-blue-50">
+                        <td class="text-center text-slate-500">${t.id}</td>
+                        <td class="font-mono text-xs">${t.raw.split(/[-:]/)[0] || 'Unknown'}</td>
+                        <td class="font-mono font-bold text-slate-700">${t.bets[0].match}</td>
+                        <td>${detail}</td>
+                        <td class="text-center"><span class="text-green-600 font-bold text-xs bg-green-50 px-2 py-0.5 rounded border border-green-200">正常</span></td>
+                    </tr>
+                `;
+            });
+            document.getElementById('validCount').innerText = list.length;
+        }
+
+        // 批量打印
+        async function startBatchPrint() {
+            if(parsedTickets.length === 0) return alert("列表为空，无法打印！\n请先录入数据并点击解析。");
+            
+            const gPass = document.getElementById('gPass').value;
+            const gMulti = document.getElementById('gMulti').value;
+            
+            if(!confirm(`确认开始打印任务？\n\n----------------\n票数: ${parsedTickets.length} 张\n过关: ${gPass}\n倍数: ${gMulti} 倍\n----------------\n\n请确保打印机纸张充足。`)) return;
+            
+            log("🚀 正在发送至打印队列...");
+            try {
+                const res = await fetch('/api/batch/print', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        tickets: parsedTickets,
+                        passType: gPass,
+                        multiplier: gMulti
+                    })
+                });
+                const d = await res.json();
+                if(d.status === 'ok') {
+                    log(`<span class="text-green-400">✅ 任务已提交！${d.queued_count} 张票据正在后台打印中...</span>`);
+                } else {
+                    log(`<span class="text-red-500">❌ 提交失败: ${d.msg}</span>`);
+                }
+            } catch(e) {
+                log(`<span class="text-red-500">❌ 网络错误</span>`);
+            }
+        }
     </script>
 </body>
 </html>
