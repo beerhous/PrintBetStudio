@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PrintBet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-gray-100 h-screen flex text-slate-800 font-sans">
+    <div class="w-64 bg-slate-900 text-white flex flex-col p-4">
+        <div class="text-xl font-bold mb-6">PrintBet Pro</div>
+        <div class="bg-blue-600 p-2 rounded mb-2">⚽ Football Mix</div>
+    </div>
+    <div class="flex-1 p-6 flex gap-6">
+        <div class="flex-1 bg-white rounded-xl shadow p-6 flex flex-col">
+            <div class="flex justify-between mb-4 items-center">
+                <h2 class="font-bold text-lg">Bet Editor</h2>
+                <div class="text-sm text-gray-400">Auto-OCR Disabled</div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div><label class="text-xs font-bold text-gray-500">PASS TYPE</label><select id="pt" class="w-full border p-2 rounded"><option value="2x1">2x1</option><option value="3x1">3x1</option></select></div>
+                <div><label class="text-xs font-bold text-gray-500">MULTI</label><input type="number" id="mu" value="10" class="w-full border p-2 rounded"></div>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <table class="w-full text-sm"><tbody id="tb"></tbody></table>
+                <button onclick="add()" class="w-full mt-4 py-2 border-2 border-dashed text-gray-400 hover:border-blue-500 hover:text-blue-500 rounded">+ Add Match</button>
+            </div>
+            <div class="mt-4 pt-4 border-t flex justify-between items-center">
+                <div class="font-bold text-lg">Total: <span id="tot">0</span></div>
+                <button onclick="prt()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold shadow hover:bg-blue-700">PRINT</button>
+            </div>
+        </div>
+        <div class="w-80 bg-white rounded-xl shadow p-6 flex flex-col items-center text-center">
+            <div class="text-xs font-bold text-gray-400 mb-2">PREVIEW</div>
+            <div id="pre" class="w-full text-left text-xs font-mono whitespace-pre-wrap mb-4 text-gray-600"></div>
+            <div class="border-t border-dashed w-full my-2"></div>
+            <div class="font-bold mb-2">Scan Code:</div>
+            <div id="qr"></div>
+            <div id="st" class="mt-4 text-xs text-gray-400">Ready</div>
+        </div>
+    </div>
+    <script>
+        let bets=[{m:'周三001',t:'SPF',c:'负'}];
+        function r(){
+            let h='',mu=document.getElementById('mu').value;
+            bets.forEach((b,i)=>h+=`<tr class="border-b"><td class="p-2"><input value="${b.m}" oninput="bets[${i}].m=this.value;r()" class="w-full outline-none"></td><td class="p-2"><select onchange="bets[${i}].t=this.value;r()"><option value="SPF" ${b.t=='SPF'?'selected':''}>SPF</option><option value="SCORE" ${b.t=='SCORE'?'selected':''}>SCORE</option></select></td><td class="p-2"><input value="${b.c}" oninput="bets[${i}].c=this.value;r()" class="w-full font-bold text-blue-600 outline-none"></td><td class="p-2"><button onclick="bets.splice(${i},1);r()" class="text-red-500">×</button></td></tr>`);
+            document.getElementById('tb').innerHTML=h;
+            document.getElementById('tot').innerText=bets.length*2*mu;
+            let txt=`TIME: ${new Date().toLocaleTimeString()}\n---\n`;
+            bets.forEach(b=>txt+=`${b.m}>${b.t}:${b.c}\n`);
+            document.getElementById('pre').innerText=txt;
+        }
+        function add(){bets.push({m:'周x000',t:'SPF',c:''});r();}
+        async function prt(){
+            document.getElementById('st').innerText="Sending...";
+            try{
+                let res=await fetch('/api/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bets:bets.map(x=>({match:x.m,type:x.t,choice:x.c})),passType:document.getElementById('pt').value,multiplier:document.getElementById('mu').value})});
+                let d=await res.json();
+                if(d.status=='ok'){
+                    document.getElementById('st').innerText="✅ Done"; document.getElementById('st').className="mt-4 text-xs text-green-600 font-bold";
+                    document.getElementById('qr').innerHTML=''; new QRCode(document.getElementById('qr'),{text:d.qr,width:100,height:100});
+                }else{alert(d.msg);document.getElementById('st').innerText="❌ Error";}
+            }catch(e){alert("Connection Error");}
+        }
+        r();
+    </script>
+</body>
+</html>
