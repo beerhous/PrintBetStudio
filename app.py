@@ -50,20 +50,38 @@ def get_config():
         "app_version": CURRENT_VERSION
     })
 
-@app.route('/api/config/save', methods=['POST'])
-def save_config():
-    """保存配置并即时应用"""
-    try:
-        new_conf = request.json
-        config_mgr.save_config(new_conf)
-        
-        # 实时更新 OCR 客户端地址
-        ocr_client.update_url(new_conf.get('ocr_url'))
-        
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        return jsonify({"status": "error", "msg": str(e)})
 
+@app.route('/api/config/get', methods=['GET'])
+def get_config():
+    """获取配置 (增强健壮性版)"""
+    try:
+        # 1. 获取打印机列表 (带容错)
+        try:
+            printers = printer_driver.get_printers()
+        except:
+            printers = ["XP-58 (未检测到驱动)"]
+
+        # 2. 获取版本
+        version = CURRENT_VERSION
+        
+        # 3. 获取配置
+        current_config = config_mgr.config
+
+        return jsonify({
+            "status": "ok",
+            "config": current_config,
+            "printers": printers,
+            "app_version": version
+        })
+    except Exception as e:
+        # 发生天大的错误也要返回 JSON，不能让前端卡死
+        print(f"Config Error: {e}")
+        return jsonify({
+            "status": "error",
+            "config": {}, 
+            "printers": [], 
+            "msg": str(e)
+        })
 @app.route('/api/system/check_update', methods=['GET'])
 def check_update():
     """检查 GitHub Release 更新"""
