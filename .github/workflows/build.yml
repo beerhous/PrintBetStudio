@@ -27,8 +27,7 @@ jobs:
 
     # 4. 执行打包 (PaddleOCR 增强版)
     - name: Build with PyInstaller
-      run: pyinstaller --noconsole --onefile --name="PrintBet_Pro" --add-data "templates;templates" --add-data "mappings.json;." --collect-all paddleocr --collect-all pyclipper --collect-all imghdr --collect-all paddle app.py
-
+      run: pyinstaller --noconsole --onefile --name="PrintBet_Pro" --add-data "templates;templates" --add-data "mappings.json;." app.py
     # 5. 整理输出文件 (关键修正点)
     # 添加了 shell: cmd，强制使用 CMD 语法，解决 if exist 报错
     - name: Prepare Artifacts
