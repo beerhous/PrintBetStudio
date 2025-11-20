@@ -2,8 +2,4 @@ flask
 pywebview
 pywin32
 pyinstaller
-pandas
-openpyxl
-paddlepaddle==2.5.2
-paddleocr>=2.7.0.3
-opencv-python-headless
+requests
