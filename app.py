@@ -24,20 +24,53 @@ GITHUB_REPO = "beerhous/PrintBetStudio"
 # === Flask 初始化 ===
 app = Flask(__name__, template_folder=resource_path('templates'))
 
-# === 服务模块初始化 (单例模式) ===
 try:
+    # 1. 最先加载配置
     config_mgr = ConfigManager()
+    print(f"[System] Config loaded from: {config_mgr._config_path}")
+    
+    # 2. 基于配置初始化其他模块
     logic_engine = SportteryRuleEngine()
     printer_driver = EscPosDriver()
     ocr_parser = SmartBetParser()
-    omr_engine = OMREngine() # OMR 绘图引擎
+    omr_engine = OMREngine()
     
-    # OCR 客户端需要动态 URL，初始时从配置读取
-    ocr_client = UmiOCRClient(url=config_mgr.get('ocr_url'))
-    print("[System] Modules initialized successfully.")
-except Exception as e:
-    print(f"[System Error] Module init failed: {e}")
+    # 3. 初始化 OCR (带容错)
+    ocr_url = config_mgr.get('ocr_url')
+    if not ocr_url: 
+        ocr_url = "http://127.0.0.1:1224/api/ocr" # 终极兜底
+    ocr_client = UmiOCRClient(url=ocr_url)
+    
+    print("[System] All modules initialized.")
 
+except Exception as e:
+    print(f"[CRITICAL ERROR] System Init Failed: {e}")
+    # 即使报错也不要让程序闪退，至少让它能打开窗口显示错误
+    config_mgr = ConfigManager() # 重新生成默认实例防止后续空指针
+
+# ... (路由部分保持不变) ...
+
+# === 修改 save_config 路由 ===
+@app.route('/api/config/save', methods=['POST'])
+def save_config():
+    """保存配置并即时应用"""
+    try:
+        new_conf = request.json
+        
+        # 1. 保存到磁盘 (ConfigManager 会处理原子写入)
+        success = config_mgr.save(new_conf)
+        
+        if success:
+            # 2. 实时应用变更 (热重载)
+            if 'ocr_url' in new_conf:
+                ocr_client.update_url(new_conf['ocr_url'])
+            
+            return jsonify({"status": "ok"})
+        else:
+            return jsonify({"status": "error", "msg": "写入文件失败"})
+            
+    except Exception as e:
+        return jsonify({"status": "error", "msg": str(e)})
 # ==========================================
 # 辅助函数：数据清洗 (中文 -> 机器码)
 # ==========================================
