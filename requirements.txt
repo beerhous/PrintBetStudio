@@ -3,3 +3,4 @@ pywebview
 pywin32
 pyinstaller
 requests
+Pillow
