@@ -7,6 +7,7 @@ import requests
 import webview
 import base64
 from io import BytesIO
+from logger import log  # <--- 新增
 from flask import Flask, render_template, request, jsonify
 
 # === 导入核心模块 ===
@@ -158,6 +159,43 @@ def save_config():
         return jsonify({"status": "ok"})
     except Exception as e:
         return jsonify({"status": "error", "msg": str(e)})
+
+# ...
+
+@app.route('/api/config/save', methods=['POST'])
+def save_config():
+    try:
+        new_conf = request.json
+        log.info(f"[Config] 用户尝试保存配置: {new_conf}") # <--- 记录操作
+        config_mgr.save_config(new_conf)
+        ocr_client.update_url(new_conf.get('ocr_url'))
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        log.error(f"[Config] 保存失败: {e}", exc_info=True) # <--- exc_info=True 会记录堆栈
+        return jsonify({"status": "error", "msg": str(e)})
+
+@app.route('/api/ocr', methods=['POST'])
+def api_ocr():
+    if 'image' not in request.files:
+        log.warning("[OCR] 请求未包含图片") # <--- 警告级别
+        return jsonify({"status": "error", "msg": "未上传图片"})
+    
+    # ... 连接检查 ...
+
+    try:
+        file = request.files['image']
+        img_bytes = file.read()
+        log.info(f"[OCR] 接收图片，大小: {len(img_bytes)} bytes") # <--- 记录输入
+
+        scan_res = ocr_client.scan(img_bytes)
+        if scan_res['status'] == 'error':
+            log.error(f"[OCR] Umi 识别失败: {scan_res['msg']}")
+            return jsonify(scan_res)
+        
+        bets = ocr_parser.parse(scan_res['data'])
+        log.info(f"[OCR] 解析成功，提取到 {len(bets)} 条数据") # <--- 记录结果
+        
+        # ...
 
 @app.route('/api/system/check_update', methods=['GET'])
 def check_update():
