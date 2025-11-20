@@ -8,68 +8,75 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: 'Microsoft YaHei', sans-serif; background: #f1f5f9; user-select: none; }
+        body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; background: #f8fafc; user-select: none; }
         
-        /* 模拟热敏纸 */
+        /* 票据预览区 */
         .receipt-paper {
             background: #fff; font-family: 'Consolas', monospace; padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); font-size: 12px; line-height: 1.5;
-            border-top: 1px dashed #e2e8f0; min-height: 400px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;
+            font-size: 12px; line-height: 1.5; min-height: 400px;
         }
-        .omr-mark { background: #000; color: #fff; padding: 0 2px; font-weight: bold; }
         
-        /* 弹窗过渡 */
+        /* 选中黑块样式 */
+        .omr-mark { background: #000; color: #fff; padding: 0 3px; font-weight: bold; border-radius: 2px; }
+        
+        /* 模态框动画 */
         .modal { transition: opacity 0.2s ease-in-out; pointer-events: none; opacity: 0; }
         .modal.open { pointer-events: auto; opacity: 1; }
         
         /* 顶部 Tab 激活态 */
-        .tab-btn.active { background: #2563eb; color: white; box-shadow: 0 2px 4px rgba(37,99,235,0.3); }
+        .tab-btn.active { background: #3b82f6; color: white; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.5); }
         
-        /* 设置中心左侧导航激活态 */
+        /* 设置中心左侧导航 */
         .settings-nav-item { cursor: pointer; padding: 12px 20px; border-left: 4px solid transparent; color: #64748b; font-weight: 600; transition: all 0.2s; }
-        .settings-nav-item:hover { background: #f8fafc; color: #334155; }
-        .settings-nav-item.active { border-left-color: #2563eb; color: #2563eb; background: #eff6ff; }
+        .settings-nav-item:hover { background: #f1f5f9; color: #1e293b; }
+        .settings-nav-item.active { border-left-color: #3b82f6; color: #3b82f6; background: #eff6ff; }
         
         /* 选号球 */
-        .ball { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1; border-radius: 50%; cursor: pointer; font-weight: bold; color: #475569; transition: all 0.1s; }
+        .ball { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 50%; cursor: pointer; font-weight: bold; color: #475569; transition: all 0.1s; background: white; }
+        .ball:hover { transform: scale(1.1); border-color: #cbd5e1; }
         .ball.active { background: #ef4444; color: white; border-color: #ef4444; box-shadow: 0 2px 4px rgba(239,68,68,0.3); }
-        .ball.rect { border-radius: 6px; width: auto; padding: 0 12px; height: 32px; font-size: 12px; }
+        .ball.rect { border-radius: 6px; width: auto; padding: 0 16px; height: 36px; font-size: 13px; }
         .ball.rect.active { background: #22c55e; color: white; border-color: #22c55e; box-shadow: 0 2px 4px rgba(34,197,94,0.3); }
     </style>
 </head>
 <body class="h-screen flex flex-col text-slate-800">
 
     <!-- 1. 顶部导航 -->
-    <header class="bg-slate-900 text-white h-14 flex items-center px-4 justify-between shadow-lg z-30">
-        <div class="flex items-center gap-3 font-bold text-lg tracking-wide">
-            <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-sm"><i class="fa-solid fa-print"></i></div>
+    <header class="bg-slate-900 text-white h-16 flex items-center px-6 justify-between shadow-lg z-30">
+        <div class="flex items-center gap-3 font-bold text-xl tracking-wide">
+            <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-sm shadow-inner"><i class="fa-solid fa-print"></i></div>
             PrintBet Studio
         </div>
-        <div class="flex bg-slate-800 p-1 rounded-lg gap-1">
-            <button onclick="switchMode('football')" id="tab-football" class="tab-btn active px-4 py-1.5 rounded text-xs font-bold transition"><i class="fa-regular fa-futbol mr-1"></i> 竞彩足球</button>
-            <button onclick="switchMode('basketball')" id="tab-basketball" class="tab-btn px-4 py-1.5 rounded text-xs font-bold transition"><i class="fa-solid fa-basketball mr-1"></i> 竞彩篮球</button>
-            <button onclick="switchMode('number')" id="tab-number" class="tab-btn px-4 py-1.5 rounded text-xs font-bold transition"><i class="fa-solid fa-ticket mr-1"></i> 数字彩票</button>
+        
+        <div class="flex bg-slate-800 p-1.5 rounded-xl gap-1 shadow-inner border border-slate-700">
+            <button onclick="switchMode('football')" id="tab-football" class="tab-btn active px-5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2"><i class="fa-regular fa-futbol"></i> 竞彩足球</button>
+            <button onclick="switchMode('basketball')" id="tab-basketball" class="tab-btn px-5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2"><i class="fa-solid fa-basketball"></i> 竞彩篮球</button>
+            <button onclick="switchMode('number')" id="tab-number" class="tab-btn px-5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2"><i class="fa-solid fa-ticket"></i> 数字彩票</button>
         </div>
-        <div class="flex items-center gap-4">
-            <div class="flex flex-col items-end text-[10px] text-slate-400 font-mono leading-tight cursor-help" title="连接状态">
-                <div class="flex items-center gap-1">OCR <span class="w-2 h-2 rounded-full bg-gray-500 transition-colors" id="led-ocr"></span></div>
-                <div class="flex items-center gap-1">PRN <span class="w-2 h-2 rounded-full bg-gray-500 transition-colors" id="led-prn"></span></div>
+
+        <div class="flex items-center gap-5">
+            <div class="flex flex-col items-end text-[10px] text-slate-400 font-mono leading-tight cursor-help" title="硬件连接状态">
+                <div class="flex items-center gap-1.5">OCR <span class="w-2 h-2 rounded-full bg-gray-500 transition-colors" id="led-ocr"></span></div>
+                <div class="flex items-center gap-1.5">PRN <span class="w-2 h-2 rounded-full bg-gray-500 transition-colors" id="led-prn"></span></div>
             </div>
-            <button onclick="openSettings()" class="w-8 h-8 rounded-full hover:bg-slate-700 flex items-center justify-center transition text-slate-300 hover:text-white">
-                <i class="fa-solid fa-gear"></i>
+            <button onclick="openSettings()" class="w-9 h-9 rounded-full hover:bg-slate-700 flex items-center justify-center transition text-slate-300 hover:text-white border border-transparent hover:border-slate-600">
+                <i class="fa-solid fa-gear text-lg"></i>
             </button>
         </div>
     </header>
 
-    <!-- 2. 主界面 -->
+    <!-- 2. 主内容区 -->
     <div class="flex-1 flex overflow-hidden">
-        <!-- 左侧编辑区 -->
+        
+        <!-- 左侧：编辑面板 -->
         <main class="flex-1 flex flex-col bg-white border-r border-slate-200 relative z-10">
-            <div class="h-14 border-b border-slate-100 flex items-center justify-between px-6 bg-slate-50/50">
+            <!-- 全局参数栏 -->
+            <div class="h-16 border-b border-slate-100 flex items-center justify-between px-6 bg-slate-50/50 backdrop-blur-sm">
                 <div class="flex gap-4 items-center" id="global-config-area">
-                    <div class="flex items-center gap-2 bg-white border border-slate-200 rounded px-2 py-1 shadow-sm">
-                        <label class="text-xs font-bold text-slate-400 uppercase">Pass</label>
-                        <select id="passType" class="text-sm font-bold text-slate-700 bg-transparent outline-none w-24">
+                    <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pass</label>
+                        <select id="passType" class="text-sm font-bold text-slate-700 bg-transparent outline-none w-24 cursor-pointer hover:text-blue-600">
                             <option value="1x1">单关</option>
                             <option value="2x1">2串1</option>
                             <option value="3x1">3串1</option>
@@ -78,162 +85,209 @@
                             <option value="6x1">6串1</option>
                         </select>
                     </div>
-                    <div class="flex items-center gap-2 bg-white border border-slate-200 rounded px-2 py-1 shadow-sm">
-                        <label class="text-xs font-bold text-slate-400 uppercase">Multi</label>
-                        <input type="number" id="multiplier" value="10" class="text-sm font-bold text-blue-600 bg-transparent outline-none w-12 text-center">
+                    <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Multi</label>
+                        <input type="number" id="multiplier" value="10" class="text-sm font-bold text-blue-600 bg-transparent outline-none w-12 text-center hover:bg-blue-50 rounded transition">
                     </div>
                 </div>
-                <button onclick="startOCR()" class="text-slate-500 hover:text-blue-600 text-sm font-bold flex items-center gap-2 transition px-3 py-1 rounded hover:bg-blue-50">
+                <button onclick="startOCR()" class="text-slate-500 hover:text-blue-600 text-sm font-bold flex items-center gap-2 transition px-4 py-2 rounded-lg hover:bg-blue-50 border border-transparent hover:border-blue-100">
                     <i class="fa-solid fa-camera"></i> 截图识别
                 </button>
             </div>
 
-            <div class="grid grid-cols-12 gap-4 px-6 py-2 bg-slate-100 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200">
+            <!-- 列表表头 -->
+            <div class="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase border-b border-slate-200 tracking-wider">
                 <div class="col-span-2">Match ID</div>
                 <div class="col-span-2">Play Type</div>
                 <div class="col-span-7">Selection</div>
                 <div class="col-span-1 text-right">Action</div>
             </div>
 
-            <div id="ticket-rows" class="flex-1 overflow-y-auto px-6 py-3 space-y-2"></div>
+            <!-- 列表滚动区 -->
+            <div id="ticket-rows" class="flex-1 overflow-y-auto px-6 py-4 space-y-3 bg-slate-50/30">
+                <!-- JavaScript 动态渲染行 -->
+            </div>
 
-            <div class="p-4 border-t border-slate-100 bg-slate-50/80 backdrop-blur-sm flex flex-col gap-3">
-                <button onclick="addNewRow()" class="w-full border-2 border-dashed border-slate-300 rounded-lg py-2 text-slate-400 hover:border-blue-500 hover:text-blue-500 transition font-bold text-sm">
-                    <i class="fa-solid fa-plus"></i> 添加比赛 / 号码
+            <!-- 底部操作栏 -->
+            <div class="p-6 border-t border-slate-100 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] flex flex-col gap-4 z-20">
+                <button onclick="addNewRow()" class="w-full border-2 border-dashed border-slate-300 rounded-xl py-3 text-slate-400 hover:border-blue-500 hover:text-blue-500 transition font-bold text-sm flex items-center justify-center gap-2 group">
+                    <i class="fa-solid fa-plus group-hover:rotate-90 transition-transform"></i> 添加比赛 / 号码
                 </button>
+                
                 <div class="flex items-center justify-between pt-2">
                     <div>
-                        <div class="text-[10px] text-slate-400 uppercase font-bold">Estimated Cost</div>
-                        <div class="text-2xl font-bold text-slate-800 leading-none">¥ <span id="total-amount">0</span></div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Estimated Cost</div>
+                        <div class="text-3xl font-bold text-slate-800 leading-none mt-1">¥ <span id="total-amount">0</span></div>
                     </div>
-                    <button onclick="doPrint()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold shadow-lg flex items-center gap-2">
+                    <button onclick="doPrint()" class="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3.5 rounded-xl font-bold shadow-lg shadow-blue-600/30 transition transform active:scale-95 flex items-center gap-3 text-lg">
                         <i class="fa-solid fa-print"></i> 立即出票
                     </button>
                 </div>
             </div>
         </main>
 
-        <!-- 右侧预览区 -->
-        <aside class="w-[380px] bg-slate-100 border-l border-slate-200 flex flex-col shadow-inner">
-            <div class="p-3 border-b border-slate-200 bg-white flex justify-between items-center">
-                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terminal Preview</h3>
+        <!-- 右侧：实时预览 -->
+        <aside class="w-[400px] bg-slate-100 border-l border-slate-200 flex flex-col shadow-inner">
+            <div class="p-4 border-b border-slate-200 bg-white flex justify-between items-center shadow-sm z-10">
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-eye"></i> Terminal Preview
+                </h3>
                 <div class="text-[10px] text-slate-300 font-mono" id="preview-time">--:--</div>
             </div>
-            <div class="flex-1 p-6 overflow-y-auto flex justify-center">
-                <div class="receipt-paper w-full flex flex-col">
-                    <div class="text-center font-bold text-base mb-1">PrintBet OMR</div>
-                    <div class="text-center text-[10px] text-slate-400 mb-4 border-b border-dashed pb-2">Official Simulation</div>
-                    
-                    <!-- OMR 图片预览容器 -->
-                    <div class="flex-1 flex items-center justify-center min-h-[200px] bg-slate-50 border border-dashed border-slate-200 rounded p-2">
-                        <img id="omr-preview-img" class="w-full opacity-90" alt="OMR Preview" style="display:none;">
-                        <span id="omr-placeholder" class="text-xs text-slate-300">等待数据...</span>
+            <div class="flex-1 p-8 overflow-y-auto flex justify-center bg-slate-200/50">
+                <div class="receipt-paper w-full flex flex-col rounded-sm relative">
+                    <!-- 仿真打孔效果 -->
+                    <div class="absolute left-2 top-1/2 -translate-y-1/2 flex flex-col gap-2">
+                        <div class="w-2 h-2 rounded-full bg-slate-200"></div>
+                        <div class="w-2 h-2 rounded-full bg-slate-200"></div>
+                        <div class="w-2 h-2 rounded-full bg-slate-200"></div>
                     </div>
 
-                    <div class="border-t border-dashed border-slate-300 mt-6 pt-4">
-                        <div class="text-center font-bold text-xs mb-2">Scan to Terminal:</div>
-                        <div id="qrcode" class="flex justify-center p-2 bg-white border rounded"></div>
+                    <div class="text-center font-bold text-base mb-1">PrintBet OMR</div>
+                    <div class="text-center text-[10px] text-slate-400 mb-6 border-b border-dashed border-slate-300 pb-3">Official Simulation</div>
+                    
+                    <!-- OMR 图片预览容器 -->
+                    <div class="flex-1 flex items-center justify-center min-h-[200px] bg-slate-50 border border-dashed border-slate-200 rounded p-2 mb-4">
+                        <img id="omr-preview-img" class="w-full opacity-90 mix-blend-multiply" alt="OMR Preview" style="display:none;">
+                        <span id="omr-placeholder" class="text-xs text-slate-300 flex flex-col items-center gap-2">
+                            <i class="fa-solid fa-file-lines text-2xl"></i>
+                            等待数据...
+                        </span>
+                    </div>
+
+                    <div class="border-t border-dashed border-slate-300 mt-2 pt-4">
+                        <div class="text-center font-bold text-xs mb-3 text-slate-500">Scan to Terminal:</div>
+                        <div id="qrcode" class="flex justify-center p-3 bg-white border border-slate-200 rounded-lg shadow-sm mx-auto w-fit"></div>
                     </div>
                 </div>
             </div>
         </aside>
     </div>
 
-    <!-- ================= 万能选号器 ================= -->
-    <div id="picker-modal" class="modal fixed inset-0 bg-black/60 z-40 flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-[650px] max-h-[85vh] flex flex-col">
-            <div class="h-14 border-b px-6 flex items-center justify-between bg-slate-50 rounded-t-xl">
-                <div><h3 class="font-bold text-slate-700" id="picker-title">选择内容</h3></div>
-                <button onclick="closePicker()" class="text-slate-400 hover:text-red-500 text-lg"><i class="fa-solid fa-times"></i></button>
+    <!-- ================= 万能选号器 Modal ================= -->
+    <div id="picker-modal" class="modal fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-[650px] max-h-[85vh] flex flex-col overflow-hidden transform scale-100 transition-transform">
+            <div class="h-16 border-b px-6 flex items-center justify-between bg-slate-50">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg" id="picker-title">选择投注内容</h3>
+                    <p class="text-xs text-slate-400 mt-0.5" id="picker-subtitle">请点击下方选项</p>
+                </div>
+                <button onclick="closePicker()" class="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 flex items-center justify-center transition"><i class="fa-solid fa-times"></i></button>
             </div>
-            <div class="flex-1 p-6 overflow-y-auto bg-white" id="picker-content"></div>
-            <div class="p-4 border-t bg-slate-50 rounded-b-xl flex justify-end">
-                <button onclick="confirmPicker()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold shadow">确认选择</button>
+            <div class="flex-1 p-8 overflow-y-auto bg-white" id="picker-content"></div>
+            <div class="p-5 border-t bg-slate-50 flex justify-end gap-3">
+                <button onclick="closePicker()" class="px-6 py-2 rounded-lg font-bold text-slate-500 hover:bg-slate-200 transition">取消</button>
+                <button onclick="confirmPicker()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-bold shadow-lg shadow-blue-600/20 transition">确认选择</button>
             </div>
         </div>
     </div>
 
-    <!-- ================= 系统设置中心 (修复版) ================= -->
-    <div id="settings-modal" class="modal fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm hidden">
-        <div class="bg-white rounded-xl shadow-2xl w-[700px] h-[500px] flex overflow-hidden">
+    <!-- ================= 系统设置中心 (Fixed) ================= -->
+    <div id="settings-modal" class="modal fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center backdrop-blur-sm hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-[750px] h-[550px] flex overflow-hidden">
             
             <!-- 左侧导航 -->
-            <div class="w-48 bg-slate-50 border-r border-slate-200 py-4 flex flex-col">
-                <div class="px-6 mb-4 text-xs font-bold text-slate-400 uppercase">Settings</div>
-                <div class="settings-nav-item active" id="nav-hardware" onclick="switchSettingsTab('hardware')"><i class="fa-solid fa-plug w-5"></i> 硬件连接</div>
-                <div class="settings-nav-item" id="nav-prefs" onclick="switchSettingsTab('prefs')"><i class="fa-solid fa-sliders w-5"></i> 操作偏好</div>
-                <div class="settings-nav-item" id="nav-system" onclick="switchSettingsTab('system')"><i class="fa-solid fa-circle-info w-5"></i> 系统更新</div>
+            <div class="w-56 bg-slate-50 border-r border-slate-200 py-6 flex flex-col">
+                <div class="px-6 mb-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Settings</div>
+                <div class="settings-nav-item active" id="nav-hardware" onclick="switchSettingsTab('hardware')">
+                    <i class="fa-solid fa-plug w-5 mr-2"></i> 硬件连接
+                </div>
+                <div class="settings-nav-item" id="nav-prefs" onclick="switchSettingsTab('prefs')">
+                    <i class="fa-solid fa-sliders w-5 mr-2"></i> 操作偏好
+                </div>
+                <div class="settings-nav-item" id="nav-system" onclick="switchSettingsTab('system')">
+                    <i class="fa-solid fa-circle-info w-5 mr-2"></i> 系统更新
+                </div>
             </div>
 
             <!-- 右侧内容区 -->
             <div class="flex-1 flex flex-col bg-white">
-                <div class="h-14 border-b flex items-center justify-between px-6">
-                    <span class="font-bold text-slate-700 text-lg">配置面板</span>
-                    <button onclick="closeSettings()" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-times"></i></button>
+                <div class="h-16 border-b flex items-center justify-between px-8">
+                    <span class="font-bold text-slate-800 text-xl">配置面板</span>
+                    <button onclick="closeSettings()" class="text-slate-400 hover:text-red-500 transition"><i class="fa-solid fa-times text-xl"></i></button>
                 </div>
                 
-                <div class="flex-1 p-6 overflow-y-auto relative">
+                <div class="flex-1 p-8 overflow-y-auto relative">
                     
                     <!-- 1. 硬件连接面板 -->
                     <div id="panel-hardware" class="settings-panel block">
-                        <div class="space-y-6">
-                            <div>
-                                <label class="block text-sm font-bold text-slate-700 mb-2">热敏打印机</label>
-                                <div class="flex gap-2">
-                                    <select id="cfg-printer" class="flex-1 border rounded px-3 py-2 text-sm outline-none bg-white"></select>
-                                    <button onclick="testPrinter()" class="bg-slate-100 border px-4 rounded text-xs font-bold hover:bg-slate-200">测试</button>
+                        <div class="space-y-8">
+                            <!-- 打印机 -->
+                            <div class="bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-300 transition shadow-sm">
+                                <label class="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                    <i class="fa-solid fa-print text-blue-500"></i> 热敏打印机
+                                </label>
+                                <div class="flex gap-3">
+                                    <select id="cfg-printer" class="flex-1 border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition bg-slate-50"></select>
+                                    <button onclick="testPrinter()" class="bg-white border border-slate-200 px-5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition whitespace-nowrap">测试打印</button>
                                 </div>
-                                <p class="text-xs text-slate-400 mt-1">若未找到，请检查 USB 连接或驱动。</p>
+                                <p class="text-xs text-slate-400 mt-2 ml-1">若列表为空，请检查 USB 连接或 Windows 驱动。</p>
                             </div>
-                            <div class="h-px bg-slate-100"></div>
-                            <div>
-                                <label class="block text-sm font-bold text-slate-700 mb-2">OCR 接口地址</label>
-                                <div class="flex gap-2">
-                                    <input id="cfg-ocr" type="text" class="flex-1 border rounded px-3 py-2 text-sm outline-none font-mono">
-                                    <button onclick="testOCR()" class="bg-slate-100 border px-4 rounded text-xs font-bold hover:bg-slate-200">测试</button>
+
+                            <!-- OCR -->
+                            <div class="bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-300 transition shadow-sm">
+                                <label class="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                    <i class="fa-solid fa-eye text-blue-500"></i> OCR 接口地址
+                                </label>
+                                <div class="flex gap-3">
+                                    <input id="cfg-ocr" type="text" class="flex-1 border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none font-mono focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition text-slate-600" placeholder="http://...">
+                                    <button onclick="testOCR()" class="bg-white border border-slate-200 px-5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition whitespace-nowrap">测试连接</button>
                                 </div>
-                                <p class="text-xs text-slate-400 mt-1">默认: http://127.0.0.1:1224/api/ocr (需开启 Umi-OCR HTTP服务)</p>
+                                <div class="flex items-start gap-2 mt-3 bg-blue-50 p-3 rounded-lg text-blue-600 text-xs border border-blue-100">
+                                    <i class="fa-solid fa-circle-info mt-0.5"></i>
+                                    <div>请确保已运行 <strong>Umi-OCR</strong> 并在全局设置中开启 [允许 HTTP 服务] (默认端口 1224)。</div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- 2. 操作偏好面板 -->
                     <div id="panel-prefs" class="settings-panel hidden">
-                        <div class="grid grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm font-bold text-slate-700 mb-2">默认过关方式</label>
-                                <select id="cfg-pass" class="w-full border rounded px-3 py-2 text-sm"><option>2x1</option><option>3x1</option></select>
+                        <div class="grid grid-cols-1 gap-6">
+                            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                                <label class="block text-sm font-bold text-slate-700 mb-3">默认过关方式</label>
+                                <select id="cfg-pass" class="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-blue-500 bg-white">
+                                    <option value="1x1">单关</option>
+                                    <option value="2x1">2串1</option>
+                                    <option value="3x1">3串1</option>
+                                </select>
+                                <p class="text-xs text-slate-400 mt-2">新开单据时自动选择此项。</p>
                             </div>
-                            <div>
-                                <label class="block text-sm font-bold text-slate-700 mb-2">默认倍数</label>
-                                <input id="cfg-multi" type="number" class="w-full border rounded px-3 py-2 text-sm">
+                            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                                <label class="block text-sm font-bold text-slate-700 mb-3">默认倍数</label>
+                                <input id="cfg-multi" type="number" class="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-blue-500 bg-white">
                             </div>
                         </div>
                     </div>
 
                     <!-- 3. 系统更新面板 -->
-                    <div id="panel-system" class="settings-panel hidden text-center pt-4">
-                        <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl text-slate-400"><i class="fa-solid fa-rocket"></i></div>
-                        <h3 class="font-bold text-xl text-slate-800">PrintBet Studio</h3>
-                        <p class="text-sm text-slate-500 mb-6" id="app-version-display">Loading...</p>
-                        <button onclick="checkUpdate()" class="bg-slate-800 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-black transition">检查更新</button>
-                        <div id="update-status" class="mt-4 text-xs text-slate-500"></div>
+                    <div id="panel-system" class="settings-panel hidden text-center pt-8">
+                        <div class="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl text-slate-400 shadow-inner border border-slate-200">
+                            <i class="fa-solid fa-rocket"></i>
+                        </div>
+                        <h3 class="font-bold text-2xl text-slate-800 mb-1">PrintBet Studio</h3>
+                        <p class="text-sm text-slate-500 mb-8 bg-slate-100 inline-block px-3 py-1 rounded-full font-mono" id="app-version-display">Version Loading...</p>
+                        
+                        <button onclick="checkUpdate()" class="bg-slate-800 text-white px-8 py-3 rounded-full text-sm font-bold hover:bg-black transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                            <i class="fa-solid fa-rotate mr-2"></i> 检查新版本
+                        </button>
+                        <div id="update-status" class="mt-6 text-sm text-slate-500 min-h-[20px]"></div>
                     </div>
 
                 </div>
 
-                <div class="p-4 border-t bg-slate-50 flex justify-end gap-3">
-                    <button onclick="closeSettings()" class="px-4 py-2 text-sm text-slate-500 font-bold hover:text-slate-800">取消</button>
-                    <button onclick="saveConfig()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-bold text-sm shadow">保存配置</button>
+                <div class="p-6 border-t bg-slate-50 flex justify-end gap-4">
+                    <button onclick="closeSettings()" class="px-6 py-2.5 text-sm text-slate-500 font-bold hover:text-slate-800 hover:bg-slate-200 rounded-lg transition">取消</button>
+                    <button onclick="saveConfig()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-600/20 transition transform active:scale-95">保存配置</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Loading Overlay -->
-    <div id="loading-mask" class="fixed inset-0 bg-white/80 z-[100] hidden flex-col items-center justify-center backdrop-blur-sm">
-        <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-600 mb-4"></i>
-        <div class="text-slate-600 font-bold animate-pulse" id="loading-text">Processing...</div>
+    <div id="loading-mask" class="fixed inset-0 bg-white/90 z-[100] hidden flex-col items-center justify-center backdrop-blur-sm">
+        <i class="fa-solid fa-circle-notch fa-spin text-5xl text-blue-600 mb-6"></i>
+        <div class="text-slate-600 font-bold text-lg animate-pulse" id="loading-text">Processing...</div>
     </div>
 
     <script>
@@ -262,11 +316,11 @@
             container.innerHTML = '';
             tickets.forEach((t, idx) => {
                 const opts = CONFIG[currentMode].types.map(o => `<option value="${o.k}" ${t.type===o.k?'selected':''}>${o.v}</option>`).join('');
-                const row = `<div class="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded border border-slate-200 shadow-sm hover:border-blue-400 transition group">
-                    <div class="col-span-2"><input value="${t.match}" onchange="updTicket(${idx},'match',this.value)" class="w-full border rounded px-2 py-1 text-sm font-mono font-bold text-slate-700 outline-none focus:border-blue-500"></div>
-                    <div class="col-span-2"><select onchange="updTicket(${idx},'type',this.value)" class="w-full border rounded px-2 py-1 text-sm outline-none">${opts}</select></div>
-                    <div class="col-span-7" onclick="openPicker(${idx})"><div class="w-full border bg-slate-50 rounded px-3 py-1 text-sm cursor-pointer hover:bg-white hover:border-blue-500 text-blue-700 font-bold truncate flex justify-between items-center h-[30px]">${formatChoice(t.type, t.choice)} <i class="fa-solid fa-chevron-right text-[10px] text-slate-300"></i></div></div>
-                    <div class="col-span-1 text-right"><button onclick="delRow(${idx})" class="text-slate-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button></div>
+                const row = `<div class="grid grid-cols-12 gap-2 items-center bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm hover:border-blue-400 hover:shadow-md transition group">
+                    <div class="col-span-2"><input value="${t.match}" onchange="updTicket(${idx},'match',this.value)" class="w-full border rounded-lg px-3 py-1.5 text-sm font-mono font-bold text-slate-700 outline-none focus:border-blue-500 transition"></div>
+                    <div class="col-span-2"><select onchange="updTicket(${idx},'type',this.value)" class="w-full border rounded-lg px-3 py-1.5 text-sm outline-none bg-white transition">${opts}</select></div>
+                    <div class="col-span-7" onclick="openPicker(${idx})"><div class="w-full border bg-slate-50 rounded-lg px-4 py-1.5 text-sm cursor-pointer hover:bg-white hover:border-blue-500 text-blue-700 font-bold truncate flex justify-between items-center h-[34px] transition border-slate-200">${formatChoice(t.type, t.choice)} <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 group-hover:text-blue-500"></i></div></div>
+                    <div class="col-span-1 text-right"><button onclick="delRow(${idx})" class="w-8 h-8 rounded-full hover:bg-red-50 text-slate-300 hover:text-red-500 transition flex items-center justify-center"><i class="fa-solid fa-trash"></i></button></div>
                 </div>`;
                 container.insertAdjacentHTML('beforeend', row);
             });
@@ -283,7 +337,7 @@
         async function refreshOMRPreview() {
             const imgEl = document.getElementById('omr-preview-img');
             const ph = document.getElementById('omr-placeholder');
-            if(tickets.length === 0) { imgEl.style.display='none'; ph.style.display='block'; return; }
+            if(tickets.length === 0) { imgEl.style.display='none'; ph.style.display='flex'; return; }
 
             try {
                 const res = await fetch('/api/preview_omr', {
@@ -300,58 +354,49 @@
 
         async function doPrint() {
             if(tickets.length===0) return alert("无内容");
-            showLoading(true, "Printing...");
+            showLoading(true, "生成 OMR 仿真指令...");
             try {
                 const res = await fetch('/api/print', {
                     method:'POST', headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({bets:tickets, passType:document.getElementById('passType').value, multiplier:document.getElementById('multiplier').value})
                 });
                 const d = await res.json();
-                if(d.status==='ok') { alert("已发送至打印机"); } else { alert(d.msg); }
-            } catch(e){ alert("Network Error"); }
+                if(d.status==='ok') { alert("已发送至打印机 ✅"); } else { alert(d.msg); }
+            } catch(e){ alert("网络错误"); }
             finally { showLoading(false); }
         }
 
-        // === 设置中心逻辑 (修复版) ===
+        // === 设置中心逻辑 (Fixed) ===
         function switchSettingsTab(tab) {
-            // 1. 移除所有导航的 active
             document.querySelectorAll('.settings-nav-item').forEach(el => el.classList.remove('active'));
-            // 2. 移除所有面板的 hidden 并添加 hidden (重置)
             document.querySelectorAll('.settings-panel').forEach(el => el.classList.add('hidden'));
-            
-            // 3. 激活当前
             document.getElementById(`nav-${tab}`).classList.add('active');
             document.getElementById(`panel-${tab}`).classList.remove('hidden');
         }
 
         async function openSettings() {
-            // 强制先显示，防止死锁
             document.getElementById('settings-modal').classList.remove('hidden');
-            
             try {
                 const res = await fetch('/api/config/get');
                 const d = await res.json();
-                if(d.status==='error') throw new Error(d.msg);
+                // 填充数据，即使 status error 也尝试填充默认值
+                const cfg = d.config || {};
+                const prns = d.printers || ["XP-58"];
                 
-                // 填充打印机
                 const sel = document.getElementById('cfg-printer'); sel.innerHTML='';
-                (d.printers || []).forEach(p => {
+                prns.forEach(p => {
                     const op = document.createElement('option'); op.value=p; op.innerText=p;
-                    if(p===d.config.printer_name) op.selected=true;
+                    if(p === cfg.printer_name) op.selected=true;
                     sel.appendChild(op);
                 });
                 
-                // 填充其他
-                document.getElementById('cfg-ocr').value = d.config.ocr_url || '';
-                document.getElementById('cfg-pass').value = d.config.default_pass_type || '2x1';
-                document.getElementById('cfg-multi').value = d.config.default_multiplier || 10;
-                document.getElementById('app-version-display').innerText = d.app_version;
+                document.getElementById('cfg-ocr').value = cfg.ocr_url || 'http://127.0.0.1:1224/api/ocr';
+                document.getElementById('cfg-pass').value = cfg.default_pass_type || '2x1';
+                document.getElementById('cfg-multi').value = cfg.default_multiplier || 10;
+                document.getElementById('app-version-display').innerText = d.app_version || "v5.0";
                 
                 checkStatus();
-            } catch(e) { 
-                console.error(e); 
-                // 不要在 openSettings 里 alert，否则会卡住界面，只在控制台报错即可，或者在 Modal 里显示错误红字
-            }
+            } catch(e) { console.error(e); }
         }
 
         function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
@@ -364,45 +409,161 @@
                 default_multiplier: document.getElementById('cfg-multi').value
             };
             await fetch('/api/config/save', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)});
+            
+            // 立即应用到主界面
+            document.getElementById('passType').value = cfg.default_pass_type;
+            document.getElementById('multiplier').value = cfg.default_multiplier;
+            
             closeSettings();
             checkStatus();
-            alert("配置已保存");
+            // 只有成功才提示
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl animate-bounce z-50';
+            toast.innerText = '配置已保存 ✅';
+            document.body.appendChild(toast);
+            setTimeout(()=>toast.remove(), 2000);
         }
 
         // 辅助功能
         function showLoading(s, t) { document.getElementById('loading-mask').style.display=s?'flex':'none'; document.getElementById('loading-text').innerText=t; }
+        
         async function checkStatus() {
             try {
-                const ocrOk = document.getElementById('cfg-ocr').value.includes('http');
-                const prnOk = !!document.getElementById('cfg-printer').value;
-                document.getElementById('led-ocr').className = `w-2 h-2 rounded-full ${ocrOk?'bg-green-500':'bg-red-500'}`;
-                document.getElementById('led-prn').className = `w-2 h-2 rounded-full ${prnOk?'bg-green-500':'bg-red-500'}`;
+                const ocrVal = document.getElementById('cfg-ocr').value;
+                const prnVal = document.getElementById('cfg-printer').value;
+                
+                const ocrOk = ocrVal && ocrVal.includes('http');
+                const prnOk = !!prnVal;
+                
+                document.getElementById('led-ocr').className = `w-2 h-2 rounded-full ${ocrOk?'bg-green-500 shadow-[0_0_8px_#22c55e]':'bg-red-500'} transition-colors`;
+                document.getElementById('led-prn').className = `w-2 h-2 rounded-full ${prnOk?'bg-green-500 shadow-[0_0_8px_#22c55e]':'bg-red-500'} transition-colors`;
             } catch(e){}
         }
-        async function mockOCR() { alert("请先在设置中配置 OCR"); }
-        async function checkUpdate() { alert("暂无更新"); }
-        async function testPrinter() { alert("测试指令已发送"); }
-        async function testOCR() { alert("OCR 连接测试中..."); }
+
+        // Mock & Tests
+        async function startOCR() {
+            let input = document.createElement('input'); input.type='file'; input.accept='image/*';
+            input.onchange = async e => {
+                if(!e.target.files[0]) return;
+                showLoading(true, "AI 识别中...");
+                const fd = new FormData(); fd.append('image', e.target.files[0]);
+                try {
+                    const res = await fetch('/api/ocr', {method:'POST', body:fd});
+                    const d = await res.json();
+                    if(d.status==='ok') {
+                        d.bets.forEach(b => tickets.push(b));
+                        updateUI();
+                        alert(`成功识别 ${d.bets.length} 条数据`);
+                    } else alert(d.msg);
+                } catch(err){ alert("OCR 服务连接失败"); }
+                finally { showLoading(false); }
+            };
+            input.click();
+        }
+
+        async function testPrinter() {
+            const p = document.getElementById('cfg-printer').value;
+            if(!p) return alert("请选择打印机");
+            const r = await fetch('/api/test/printer', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({printer:p})});
+            alert((await r.json()).status==='ok' ? "✅ 测试指令已发送" : "❌ 连接失败");
+        }
+        async function testOCR() {
+            const u = document.getElementById('cfg-ocr').value;
+            const r = await fetch('/api/test/ocr', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url:u})});
+            const d = await r.json();
+            alert(d.status==='ok' ? "✅ OCR 服务在线" : "❌ OCR 连接失败\n请检查 Umi-OCR 是否开启 HTTP 服务");
+        }
+        async function checkUpdate() {
+            const msg = document.getElementById('update-status');
+            msg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在连接 GitHub...';
+            try {
+                const r = await fetch('/api/system/check_update');
+                const d = await r.json();
+                if(d.status==='ok') {
+                    if(d.has_update) msg.innerHTML = `<span class="text-green-600 font-bold">发现新版本: ${d.latest_version}</span> <a href="#" onclick="openUrl('${d.download_url}')" class="underline text-blue-600 ml-2">下载</a>`;
+                    else msg.innerText = "已经是最新版本";
+                } else msg.innerText = "检查失败: " + d.msg;
+            } catch(e){ msg.innerText = "网络错误"; }
+        }
+        async function openUrl(u) { await fetch('/api/system/open_url', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url:u})}); }
+
+        // 选号器
+        function openPicker(idx) {
+            activeRowIndex = idx;
+            const t = tickets[idx];
+            tempChoice = t.choice;
+            document.getElementById('picker-title').innerText = `${t.match} - ${t.type}`;
+            document.getElementById('picker-content').innerHTML = '';
+            
+            if(t.type === 'CBF') renderScoreGrid();
+            else if(currentMode === 'number') renderNumGrid(0,9);
+            else if(['SPF','RQSPF','SF','RFSF','DXF'].includes(t.type)) renderBasicGrid(t.type);
+            else renderInput();
+            
+            document.getElementById('picker-modal').classList.add('open');
+        }
+        function closePicker() { document.getElementById('picker-modal').classList.remove('open'); }
+        function confirmPicker() { tickets[activeRowIndex].choice = tempChoice; updateUI(); closePicker(); }
+
+        // 渲染网格逻辑
+        function renderBasicGrid(type) {
+            const isBasketball = ['SF','RFSF','DXF'].includes(type);
+            const opts = isBasketball ? [{v:'3',l:'主胜/大'}, {v:'0',l:'主负/小'}] : [{v:'3',l:'胜'}, {v:'1',l:'平'}, {v:'0',l:'负'}];
+            if(type=='DXF') { opts[0].l='大(1)'; opts[0].v='1'; opts[1].l='小(2)'; opts[1].v='2'; }
+            
+            const div = document.createElement('div'); div.className = 'flex gap-6 justify-center pt-10';
+            opts.forEach(o => {
+                const b = document.createElement('div'); b.className = `ball rect w-32 h-16 text-lg ${tempChoice==o.v?'active':''}`;
+                b.innerText = o.l;
+                b.onclick = ()=>{ tempChoice=o.v; document.querySelectorAll('.ball').forEach(x=>x.classList.remove('active')); b.classList.add('active'); };
+                div.appendChild(b);
+            });
+            document.getElementById('picker-content').appendChild(div);
+        }
+        function renderScoreGrid() {
+            const scores = ['1:0','2:0','2:1','3:0','3:1','3:2','4:0','4:1','4:2','5:0','5:1','5:2','胜其他','0:0','1:1','2:2','3:3','平其他','0:1','0:2','1:2','0:3','1:3','2:3','0:4','1:4','2:4','0:5','1:5','2:5','负其他'];
+            const div = document.createElement('div'); div.className = 'grid grid-cols-5 gap-4';
+            scores.forEach(s => {
+                const b = document.createElement('div'); b.className = `ball rect w-full h-12 ${tempChoice==s?'active':''}`;
+                b.innerText = s;
+                b.onclick = ()=>{ tempChoice=s; document.querySelectorAll('.ball').forEach(x=>x.classList.remove('active')); b.classList.add('active'); };
+                div.appendChild(b);
+            });
+            document.getElementById('picker-content').appendChild(div);
+        }
+        function renderNumGrid(min, max) {
+            const div = document.createElement('div'); div.className = 'flex flex-wrap gap-4 justify-center';
+            let sels = tempChoice.split(',').filter(x=>x);
+            for(let i=min; i<=max; i++) {
+                const v = i.toString();
+                const b = document.createElement('div'); b.className = `ball ${sels.includes(v)?'active':''}`;
+                b.innerText = v;
+                b.onclick = ()=>{ 
+                    if(sels.includes(v)) sels = sels.filter(x=>x!==v); else sels.push(v);
+                    tempChoice = sels.join(',');
+                    b.classList.toggle('active');
+                };
+                div.appendChild(b);
+            }
+            document.getElementById('picker-content').appendChild(div);
+        }
+        function renderInput() { document.getElementById('picker-content').innerHTML = `<input class="w-full border p-4 rounded-xl text-xl outline-none focus:border-blue-500" value="${tempChoice}" oninput="tempChoice=this.value" placeholder="手动输入内容...">`; }
 
         // Init
         switchMode('football');
-        window.onload = openSettings; // 首次加载尝试加载配置(静默)后立即关闭，或者直接 checkStatus
-        setTimeout(()=> { closeSettings(); checkStatus(); }, 500); 
-        
-        // 选号器相关 (保留基础框架，避免报错)
-        function openPicker(idx) { activeRowIndex=idx; tempChoice=tickets[idx].choice; document.getElementById('picker-modal').classList.add('open'); renderBasicGrid(); }
-        function closePicker() { document.getElementById('picker-modal').classList.remove('open'); }
-        function confirmPicker() { tickets[activeRowIndex].choice = tempChoice; updateUI(); closePicker(); }
-        function renderBasicGrid() { 
-            const c = document.getElementById('picker-content'); c.innerHTML='';
-            const d = document.createElement('div'); d.className='flex gap-4';
-            ['3','1','0'].forEach(v => {
-                const b = document.createElement('div'); b.className=`ball rect w-24 h-12 ${tempChoice==v?'active':''}`;
-                b.innerText=v; b.onclick=()=>{tempChoice=v; document.querySelectorAll('.ball').forEach(x=>x.classList.remove('active')); b.classList.add('active');};
-                d.appendChild(b);
-            });
-            c.appendChild(d);
-        }
+        window.onload = async () => {
+            try {
+                const r = await fetch('/api/config/get');
+                if(r.ok) {
+                    const d = await r.json();
+                    if(d.config) {
+                        document.getElementById('passType').value = d.config.default_pass_type || '2x1';
+                        document.getElementById('multiplier').value = d.config.default_multiplier || 10;
+                    }
+                }
+            } catch(e){}
+            checkStatus();
+        };
     </script>
 </body>
 </html>
