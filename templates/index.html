@@ -99,6 +99,9 @@
                             <option value="1x1">单关</option>
                             <option value="2x1">2串1</option>
                             <option value="3x1">3串1</option>
+                            <option value="4x1">4串1</option>
+                            <option value="5x1">5串1</option>
+                            <option value="6x1">6串1</option>
                         </select>
                     </div>
                     <div class="flex items-center gap-2 bg-white border border-slate-200 rounded px-2 py-1 shadow-sm">
@@ -238,6 +241,9 @@
                                     <option value="1x1">单关 (1x1)</option>
                                     <option value="2x1">2串1</option>
                                     <option value="3x1">3串1</option>
+                                    <option value="4x1">4串1</option>
+                                    <option value="5x1">5串1</option>
+                                    <option value="6x1">6串1</option>
                                 </select>
                             </div>
                             <div>
@@ -505,27 +511,37 @@
 
         async function openSettings() {
             document.getElementById('settings-modal').classList.remove('hidden');
+            
             try {
                 const res = await fetch('/api/config/get');
                 const d = await res.json();
                 
+                // 容错处理
+                const config = d.config || {};
+                const printers = d.printers || ["XP-58"];
+
                 // 填充打印机
-                const sel = document.getElementById('cfg-printer'); sel.innerHTML='';
-                d.printers.forEach(p => {
-                    const op = document.createElement('option'); op.value=p; op.innerText=p;
-                    if(p===d.config.printer_name) op.selected=true;
-                    sel.appendChild(op);
+                const sel = document.getElementById('cfg-printer');
+                sel.innerHTML = '';
+                printers.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p; opt.innerText = p;
+                    if(p === config.printer_name) opt.selected = true;
+                    sel.appendChild(opt);
                 });
                 
-                document.getElementById('cfg-ocr').value = d.config.ocr_url;
-                document.getElementById('cfg-pass').value = d.config.default_pass_type;
-                document.getElementById('cfg-multi').value = d.config.default_multiplier;
-                document.getElementById('app-version-display').innerText = d.app_version;
+                document.getElementById('cfg-ocr').value = config.ocr_url || "http://127.0.0.1:1224/api/ocr";
+                document.getElementById('cfg-pass').value = config.default_pass_type || "2x1";
+                document.getElementById('cfg-multi').value = config.default_multiplier || 10;
+                document.getElementById('app-version-display').innerText = d.app_version || "v4.0";
                 
                 checkStatus();
                 
-            } catch(e){}
+            } catch(e) { 
+                alert("加载配置失败: " + e.message); 
+            }
         }
+        
         function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
 
         async function saveConfig() {
@@ -571,8 +587,6 @@
         // 状态检查
         async function checkStatus() {
             try {
-                // 为了演示，这里只做简单视觉反馈
-                // 实际项目中可以轮询 test 接口
                 const ocrOk = document.getElementById('cfg-ocr').value.includes('http');
                 document.getElementById('led-ocr').className = `w-2 h-2 rounded-full ${ocrOk?'bg-green-500':'bg-red-500'} transition-colors`;
                 
@@ -584,11 +598,17 @@
         // Init
         switchMode('football');
         window.onload = async () => {
-            // Load defaults
-            const r = await fetch('/api/config/get');
-            const d = await r.json();
-            document.getElementById('passType').value = d.config.default_pass_type;
-            document.getElementById('multiplier').value = d.config.default_multiplier;
+            // Load defaults with error handling
+            try {
+                const r = await fetch('/api/config/get');
+                if(r.ok) {
+                    const d = await r.json();
+                    if(d.status !== 'error') {
+                        document.getElementById('passType').value = d.config.default_pass_type || "2x1";
+                        document.getElementById('multiplier').value = d.config.default_multiplier || 10;
+                    }
+                }
+            } catch(e) { console.log("Init config load failed"); }
             checkStatus();
         };
 
