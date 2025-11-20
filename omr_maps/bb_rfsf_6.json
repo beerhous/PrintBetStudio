@@ -1,0 +1,54 @@
+{
+  "meta": {
+    "name": "basketball_rfsf_6",
+    "width": 576,
+    "height": 1100,
+    "block_w": 25,
+    "block_h": 14,
+    "type": "additive_dual_layer"
+  },
+  "layout": {
+    "columns": [
+      { "id": 1, "x_offset": 40 },
+      { "id": 2, "x_offset": 220 },
+      { "id": 3, "x_offset": 400 }
+    ],
+    "blocks": {
+      "top": { "start_index": 0, "base_y": 150 },
+      "bottom": { "start_index": 3, "base_y": 580 }
+    },
+    "rows_relative": {
+      "week": {
+        "start_y": 0, "gap_x": 35, 
+        "map": ["周一","周二","周三","周四","周五","周六","周日"]
+      },
+      "match_num_additive": {
+        "units":    { "y": 90, "gap_x": 35, "vals": [1, 2, 4, 5] },
+        "tens":     { "y": 130, "gap_x": 35, "vals": [1, 2, 4, 5] },
+        "hundreds": { "y": 170, "gap_x": 35, "vals": [1, 2, 4, 5] }
+      },
+      "options": {
+        "label_y": 230,
+        "0": {"x_rel": 0, "label": "负"}, 
+        "3": {"x_rel": 80, "label": "胜"}
+      }
+    },
+    "footer": {
+      "pass": {
+        "4x1": {"x": 40, "y": 950},
+        "5x1": {"x": 40, "y": 980},
+        "6x1": {"x": 40, "y": 1010},
+        "单关": {"x": 500, "y": 950}
+      },
+      "multi": {
+        "start_x": 400, "gap_x": 35,
+        "rows": [
+           {"y": 950, "vals": ["1","2","3","4"]},
+           {"y": 980, "vals": ["5","6","7","8"]},
+           {"y": 1010, "vals": ["9","10","20","30"]},
+           {"y": 1040, "vals": ["40","50"]}
+        ]
+      }
+    }
+  }
+}
