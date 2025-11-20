@@ -18,21 +18,61 @@ from config_manager import ConfigManager
 from omr_engine import OMREngine
 
 # === 版本信息 ===
-CURRENT_VERSION = "v5.0.0"
+CURRENT_VERSION = "v5.2.0 (Final)"
 GITHUB_REPO = "beerhous/PrintBetStudio"
 
 # === Flask 初始化 ===
 app = Flask(__name__, template_folder=resource_path('templates'))
 
 # === 服务模块初始化 (单例模式) ===
-config_mgr = ConfigManager()
-logic_engine = SportteryRuleEngine()
-printer_driver = EscPosDriver()
-ocr_parser = SmartBetParser()
-omr_engine = OMREngine() # OMR 绘图引擎
+try:
+    config_mgr = ConfigManager()
+    logic_engine = SportteryRuleEngine()
+    printer_driver = EscPosDriver()
+    ocr_parser = SmartBetParser()
+    omr_engine = OMREngine() # OMR 绘图引擎
+    
+    # OCR 客户端需要动态 URL，初始时从配置读取
+    ocr_client = UmiOCRClient(url=config_mgr.get('ocr_url'))
+    print("[System] Modules initialized successfully.")
+except Exception as e:
+    print(f"[System Error] Module init failed: {e}")
 
-# OCR 客户端需要动态 URL，初始时从配置读取
-ocr_client = UmiOCRClient(url=config_mgr.get('ocr_url'))
+# ==========================================
+# 辅助函数：数据清洗 (中文 -> 机器码)
+# ==========================================
+def preprocess_bets_for_omr(bets):
+    """
+    将前端的原始数据清洗为 OMR 引擎可识别的格式
+    关键：填充 machine_choice 字段
+    """
+    processed = []
+    if not bets: return []
+
+    for b in bets:
+        # 1. 自动判断彩种 (用于查表)
+        cat = "football"
+        if b['type'] in ["SF", "RFSF", "SFC", "DXF"]: cat = "basketball"
+        elif b['type'] in ["P3", "P5", "DLT"]: cat = "number"
+
+        # 2. 调用 Logic 层获取标准机器码
+        # 例如: "主胜" -> "3", "大" -> "1", "235" -> "235"
+        # 优先使用前端传来的 machine_choice (如果是OCR结果)，否则重新计算
+        m_choice = b.get('machine_choice')
+        if not m_choice:
+            m_choice = logic_engine.get_code(cat, b['type'], b['choice'])
+        
+        # 如果查不到代码(比如手动输入的非法值)，尝试直接使用输入值
+        if not m_choice: m_choice = b['choice']
+
+        # 3. 构造新对象
+        processed.append({
+            "match": b['match'],
+            "type": b['type'],
+            "choice": b['choice'],
+            "machine_choice": str(m_choice) # 必须转字符串 "3"
+        })
+    return processed
 
 # ==========================================
 # 1. 页面路由
@@ -186,60 +226,54 @@ def api_print():
         d = request.json
         prn = config_mgr.get('printer_name')
         
-        bets = d['bets']
-        if not bets: return jsonify({"status":"error", "msg":"无数据"})
+        # 1. 数据清洗与预处理
+        clean_bets = preprocess_bets_for_omr(d.get('bets', []))
+        if not clean_bets: return jsonify({"status":"error", "msg":"无有效数据"})
         
-        pass_type = d['passType']
-        multiplier = d['multiplier']
-        play_type = bets[0]['type'] # 假设单张票玩法一致
+        pass_type = d.get('passType', '单关')
+        multiplier = d.get('multiplier', 1)
+        play_type = clean_bets[0]['type'] # 假设单张票玩法一致
         
-        # 1. 数据预处理 (前端选择 -> 机器码)
-        # 确保每个 bet 都有 machine_choice
-        for b in bets:
-            # 调用 Logic 层获取官方代码 (如让胜->3, 大->1)
-            # 如果前端已经传了 machine_choice 则复用，否则查表
-            if 'machine_choice' not in b:
-                # 这里的 category 需要简单判断
-                cat = "football"
-                if b['type'] in ["SF","RFSF","SFC","DXF"]: cat = "basketball"
-                
-                # 获取归一化场次和选项代码
-                m_code = logic_engine.normalize_match_id(b['match'], cat)
-                o_code = logic_engine.get_code(cat, b['type'], b['choice'])
-                
-                b['machine_choice'] = o_code
+        # 2. 调用 OMR 引擎生成图片 (PIL Image)
+        print(f"[Print] Generating OMR for {len(clean_bets)} bets, type={play_type}")
+        img = omr_engine.dispatch(clean_bets, pass_type, multiplier, play_type)
         
-        # 2. 调用 OMR 引擎生成图片
-        # dispatch 会自动判断 3关/6关 并调用对应 JSON
-        img = omr_engine.dispatch(bets, pass_type, multiplier, play_type)
-        
-        # 3. 转指令并打印
+        # 3. 图片转打印指令 (Hex)
         raw_data = printer_driver.image_to_commands(img)
+        
+        # 4. 发送物理打印
         ok = printer_driver.send_raw(prn, raw_data)
         
-        return jsonify({"status":"ok" if ok else "error"})
+        if ok:
+            return jsonify({"status":"ok"})
+        else:
+            return jsonify({"status":"error", "msg": f"打印机 [{prn}] 无响应"})
             
     except Exception as e:
-        print(e)
-        return jsonify({"status": "error", "msg": f"打印服务异常: {str(e)}"})
+        print(f"[Print Error] {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "msg": str(e)})
 
 @app.route('/api/preview_omr', methods=['POST'])
 def api_preview():
     """前端调用此接口获取 Base64 图片进行展示"""
     try:
         d = request.json
-        bets = d['bets']
         
-        # 预处理 (同上)
-        for b in bets:
-            if 'machine_choice' not in b:
-                cat = "football"
-                if b['type'] in ["SF","RFSF","SFC","DXF"]: cat = "basketball"
-                b['machine_choice'] = logic_engine.get_code(cat, b['type'], b['choice'])
+        # 1. 数据清洗
+        clean_bets = preprocess_bets_for_omr(d.get('bets', []))
+        if not clean_bets: 
+             return jsonify({"status":"ok", "img_base64": ""})
 
-        img = omr_engine.dispatch(bets, d['passType'], d['multiplier'], bets[0]['type'])
+        pass_type = d.get('passType', '单关')
+        multiplier = d.get('multiplier', 1)
+        play_type = clean_bets[0]['type']
+
+        # 2. 调用 OMR 绘图
+        img = omr_engine.dispatch(clean_bets, pass_type, multiplier, play_type)
         
-        # 转 Base64
+        # 3. 转 Base64
         output_buffer = BytesIO()
         img.save(output_buffer, format='PNG')
         byte_data = output_buffer.getvalue()
